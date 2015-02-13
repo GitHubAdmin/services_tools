@@ -1,0 +1,113 @@
+#!/bin/bash
+# This file contains the reusable functions we use for
+# service access
+
+#
+# This is a general GET call for any URI off the base URL. The
+# response is written to STDOUT. The response SHOULD be JSON.
+#
+# Param 1: the URI to be appended to the base url for the GET
+# 
+getServiceInfo() {
+  local service_uri=$1
+
+  curl \
+    -s \
+    --insecure \
+    -H "$AUTHENTICATION_HEADER" \
+    ${SERVICE_HOST}/${service_uri}
+}
+
+#
+# Submits a post request for the specified URI with the
+# specified parameters. Returns the raw json of the
+# response to the post.
+#
+# Param 1: The URI to which we are going to post the parameters
+# Param 2: The array of parameters to post. Each should be of the
+#          form "field[thing]=value" just like they would be if
+#          posted from an HTML form.
+# 
+postServiceInfo() {
+  local uri=$1
+  local form_fields
+  shift
+  for f in ${@}
+  do
+    # Handle putting '&' between the params
+    if (( ${#form_fields} > 0 )); then form_fields+="&"; fi
+    form_fields+="$f"
+  done
+
+  curl \
+    -s \
+    --insecure \
+    -H "$AUTHENTICATION_HEADER" \
+    --data ${form_fields} \
+    ${SERVICE_HOST}/${uri}
+}
+
+#
+# Determine if a configured account record exists for the specified
+# account. The response should be (true|false) written to
+# STDOUT.
+#
+# Param 1: Third Party ID
+# Param 2: Service Definition ID
+# Param 3: Account ID
+#
+configuredAccountExists() {
+  local tp_id=$1
+  local sd_id=$2
+  local acct_id=$3
+
+  getServiceInfo "services/third_parties/${tp_id}/service_definitions/${sd_id}/configured_accounts" | \
+    underscore select ":has(.account_id:expr(x=${acct_id}))" | \
+    underscore process "data.length > 0"
+}
+
+#
+# Check to determine if a specified account mapping exists. Write
+# (true|false) to stdout.
+#
+# Param 1: the third party id of the account mapping
+# Param 2: the account id we're checking for
+# 
+accountMappingExists() {
+  local tp_id=$1
+  local acct_id=$2
+  getServiceInfo "services/third_parties/${tp_id}/account_mappings" | \
+    underscore select ":has(.account_id:expr(x=${acct_id}))" | \
+    underscore process "data.length > 0"
+}
+
+#
+# Determines the ID of object given the specified URI and the key.
+# The ID of the object is written to STDOUT.
+#
+# Param 1: the URI to get
+# Param 2: the key of the object for which we want the ID
+#
+getSpecifiedId() {
+  local uri=$1
+  local key=$2
+  getServiceInfo $uri | \
+    underscore select ":has(.key:val(\"${key}\")) > .id" | \
+    underscore process 'data[0]'
+}
+
+#
+# Determines the ID of the service definition associated with the
+# specified third party and service IDs. The ID of the 
+# service definition is written to STDOUT.
+#
+# Param 1: the third party ID
+# Param 2: the service ID
+#
+getServiceDefinitionId() {
+  local tp_id=$1
+  local svc_id=$2
+  getServiceInfo "services/third_parties/${tp_id}/service_definitions" | \
+    underscore select ":has(.service_id:expr(x=${svc_id})) > .id" | \
+    underscore process 'data[0]'
+}

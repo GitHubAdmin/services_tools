@@ -43,7 +43,28 @@ The Tools
 =========
 
 Over time, there will be an increasing number of tools available in this
-project. For the moment, there is only the one tool:
+project. For the moment, there are only two tools:
+
+check_pcc_dir
+-------------
+
+This script allows the user to verify that the PCC sftp directory actually
+exists on the server before running the *pcc_account_setup* script.
+
+The help:
+
+    usage: check_pcc_dir options
+
+    This script will attempt to determine if a specified
+    directory has been set up for the PCC service.
+
+    OPTIONS:
+      -h      Show this message
+      -s uri  Specify the root URL for the service server.
+      -t tkn  Specify the API token for the specified service server. Defaults
+              to the value of API_TOKEN
+      -d dir  Specify the directory in which the account's
+              mds files will be placed on the PCC sftp server (required)
 
 pcc_account_setup
 -----------------
@@ -63,7 +84,7 @@ The help:
 
     OPTIONS:
       -h      Show this message
-      -s uri  Specify the root URL for the service server. Default: 
+      -s uri  Specify the root URL for the service server.
       -t tkn  Specify the API token for the specified service server. Defaults
               to the value of API_TOKEN
       -a id   Specify the account ID to be configured (required)

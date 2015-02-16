@@ -1,0 +1,28 @@
+#!/usr/bin/expect
+#
+# Usage: check_dir <host> <dir>
+# 
+# The following environment variables must be set:
+#
+#   CHECK_USER - the sftp user name
+#   CHECK_PWD - the sftp password
+#
+# We put these guys in the environment so the username/password
+# don't show up on the command line. Bit of a security hole.
+
+# Log onto the server
+spawn sftp $env(CHECK_USER)@[lindex $argv 0]
+expect "*password: "
+send "$env(CHECK_PWD)\n"
+
+# Try to change to the specified directory. This is the whole
+# point of the exercise. We want to have the user see the 
+# interaction to determine if they have been provided with a
+# valid directory on this server.
+expect "sftp>"
+send "cd [lindex $argv 1]\n"
+
+# Nothing more to see here; just exit
+expect "sftp>"
+send "exit\n"
+interact

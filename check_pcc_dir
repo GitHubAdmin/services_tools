@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# Load up the functions we need to use from the
+# library. It will be located in the same directory
+# as this script.
+source $(dirname $0)/service_funcs
+
+usage() {
+  cat <<EOF
+  usage: $0 options
+
+  This script will attempt to determine if a specified
+  directory has been set up for the PCC service.
+
+  OPTIONS:
+    -h      Show this message
+    -s uri  Specify the root URL for the service server. Defaults to the
+            value of SERVICES_HOST
+    -t tkn  Specify the API token for the specified service server. Defaults
+            to the value of API_TOKEN
+    -d dir  Specify the directory in which the account's
+            mds files will be placed on the PCC sftp server (required)
+EOF
+}
+
+SFTP_DIR=
+# Default these guys to whatever the user sets the environment
+# variables to.
+SERVICE_HOST=$SERVICES_HOST
+SERVICE_API_TOKEN=$API_TOKEN
+
+# Parse the command line options
+while getopts "hd:s:t:" OPTION
+do
+  case $OPTION in
+    h)
+      usage
+      exit 1
+      ;;
+    s)
+      SERVICE_HOST=$OPTARG
+      ;;
+    t)
+      SERVICE_API_TOKEN=$OPTARG
+      ;;
+    d)
+      SFTP_DIR=$OPTARG
+      ;;
+    ?)
+      usage
+      exit
+      ;;
+  esac
+done
+
+AUTHENTICATION_HEADER="Authorization: Token token=\"${SERVICE_API_TOKEN}\""
+
+# Make sure we have all the options we need to do our job.
+
+if [ -z "$SERVICE_HOST" ]; then
+  echo "Must specify the host for services in the form \"https://serivces.domain.com\""
+  echo "You can use the -s <host> option or set the environment variable"
+  echo "export SERVICES_HOST=https://services.domain.com"
+  usage
+  exit 1
+fi
+
+if [ -z "$SERVICE_API_TOKEN" ]; then
+  echo "Must specify the API_TOKEN for the services host."
+  echo "You can use the -t <token> option or set the environment variable"
+  echo "export API_TOKEN=abc123"
+  usage
+  exit 1
+fi
+
+if [ -z "$SFTP_DIR" ]; then
+  echo "Must specify the PCC sftp directory (-d)"
+  usage
+  exit 1
+fi
+
+#################################################################
+# Main program
+#################################################################
+
+resp=$(getServiceInfo "services/third_parties")
+if [ "${resp}" == "HTTP Token: Access denied." ]; then
+  echo "Your API_TOKEN is invalid; please correct and try again"
+  exit 1
+fi
+
+
+pcc_tp_id=$(getSpecifiedId "services/third_parties" "pcc")
+mds_pull_id=$(getSpecifiedId "services/services" "mds_pull")
+pcc_svc_def_id=$(getServiceDefinitionId $pcc_tp_id $mds_pull_id)
+service_definition=$(getServiceInfo "services/third_parties/${pcc_tp_id}/service_definitions/${pcc_svc_def_id}")
+
+pcc_host=$(echo $service_definition | underscore extract "hostname")
+pcc_username=$(echo $service_definition | underscore extract "username")
+pcc_password=$(echo $service_definition | underscore extract "password")
+
+# All the rigamarole below (${.....:1:((${#....} - 2))}) is to remove the
+# double quotes around the values returned from the server. If we don't 
+# do this, nothing is going to work.
+#
+# BTW: We put the user/password in the environment to avoid having them
+# appear on the command line. A bit of a security issue, that.
+export CHECK_USER=${pcc_username:1:((${#pcc_username} - 2))}
+export CHECK_PWD=${pcc_password:1:((${#pcc_password} - 2))}
+
+# Now run the expect script to see if the directory specified is valid.
+$(dirname $0)/check_dir ${pcc_host:1:((${#pcc_host} - 2))} ${SFTP_DIR}

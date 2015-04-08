@@ -11,9 +11,13 @@
 getServiceInfo() {
   local service_uri=$1
 
+  #curl \
+    #-s \
+    #--insecure \
+    #-H "$AUTHENTICATION_HEADER" \
+    #${SERVICE_HOST}/${service_uri}
   curl \
     -s \
-    --insecure \
     -H "$AUTHENTICATION_HEADER" \
     ${SERVICE_HOST}/${service_uri}
 }
@@ -45,6 +49,26 @@ postServiceInfo() {
     -H "$AUTHENTICATION_HEADER" \
     --data ${form_fields} \
     ${SERVICE_HOST}/${uri}
+}
+
+#
+# Looks through the configured accounts for the specified third party
+# and service definition for a specified account id. If found, it
+# returns the id of the configured account. An empty string if nothing
+# is found.
+#
+# Param 1: Third Party ID
+# Param 2: Service Definition ID
+# Param 3: Account ID
+#
+getConfiguredAccountId() {
+  local tp_id=$1
+  local sd_id=$2
+  local acct_id=$3
+
+  getServiceInfo "services/third_parties/${tp_id}/service_definitions/${sd_id}/configured_accounts" | \
+    underscore select ":has(.account_id:expr(x=${acct_id})) > .id" | \
+    underscore process 'data[0]'
 }
 
 #

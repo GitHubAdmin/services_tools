@@ -21,6 +21,8 @@ send "$env(CHECK_PWD)\n"
 # valid directory on this server.
 expect "sftp>"
 send "cd [lindex $argv 1]\n"
+expect "sftp>"
+send "ls\n"
 
 # Nothing more to see here; just exit
 expect "sftp>"

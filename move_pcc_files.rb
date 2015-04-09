@@ -8,6 +8,8 @@ require 'rest-client'
 THIRD_PARTY_ID = 7 # PCC
 SERVICE_DEFINITION_ID = 13 # PCC
 
+echo $(date)
+
 result = RestClient.get "https://www.abaqis.com/services/third_parties/#{THIRD_PARTY_ID}/service_definitions/#{SERVICE_DEFINITION_ID}",  { 'Authorization' => "Token token=\"#{ENV['API_TOKEN']}\"" }
 sftp_values = JSON.parse(result)
 

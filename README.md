@@ -91,6 +91,23 @@ The help:
       -d dir  Specify the directory in which the accounts
               mds files will be placed on the PCC sftp server (required)
 
+move_pcc_files.rb
+-----------------
+
+This ruby-script is designed to move all the files from one PCC SFTP directory
+to another. At this point, the two directories are hardcoded to:
+
+* From: jsh
+* To: crg
+
+There are no command-line paramters for this script, although one could consider
+putting the directory selection on the command line if this is ever needed again.
+
+For this script you will need the following gems installed:
+
+* net-sftp
+* rest-client
+
 Copyright
 =========
 

@@ -1,0 +1,18 @@
+<% 
+  var Table = require('cli-table');
+  // Instantiate
+  var table = new Table({
+    head: [ 'ID', 'Account Name', 'Enabled' ],
+    colWidths: [ 10, 60, 20 ] ,
+    chars: { 'top': '' , 'top-mid': '' , 'top-left': '' , 'top-right': '' , 
+             'bottom': '' , 'bottom-mid': '' , 'bottom-left': '' , 
+	     'bottom-right': '' , 'left': '' , 'left-mid': '' , 'mid': '' , 'mid-mid': '' , 
+	     'right': '' , 'right-mid': '' , 'middle': ' ' },
+    style: { 'padding-left': 0, 'padding-right': 0 }
+    });
+
+  _.each(configured_accounts, function(item) {
+    table.push( [ item.account_id, item.account_name, item.enabled ]);
+  });
+%>
+<%= table.toString() %>

@@ -1,0 +1,105 @@
+#!/bin/bash
+
+# Load up the functions we need to use from the
+# library. It will be located in the same directory
+# as this script.
+source $(dirname $0)/service_funcs
+
+usage() {
+  cat <<EOF
+  usage: $0 options
+
+  This script will list the MDS Push configured accounts.
+
+  OPTIONS:
+    -h      Show this message
+    -s uri  Specify the root URL for the service server. Defaults to the
+            value of SERVICES_HOST
+    -t tkn  Specify the API token for the specified service server. Defaults
+            to the value of API_TOKEN
+EOF
+}
+
+# Default these guys to whatever the user sets the environment
+# variables to.
+SERVICE_HOST=$SERVICES_HOST
+SERVICE_API_TOKEN=$API_TOKEN
+
+# Parse the command line options
+while getopts "ha:s:t:" OPTION
+do
+  case $OPTION in
+    h)
+      usage
+      exit 1
+      ;;
+    s)
+      SERVICE_HOST=$OPTARG
+      ;;
+    t)
+      SERVICE_API_TOKEN=$OPTARG
+      ;;
+    ?)
+      usage
+      exit
+      ;;
+  esac
+done
+
+AUTHENTICATION_HEADER="Authorization: Token token=\"${SERVICE_API_TOKEN}\""
+
+# Make sure we have all the options we need to do our job.
+
+if [ -z "$SERVICE_HOST" ]; then
+  echo "Must specify the host for services in the form \"https://serivces.domain.com\""
+  echo "You can use the -s <host> option or set the environment variable"
+  echo "export SERVICES_HOST=https://services.domain.com"
+  usage
+  exit 1
+fi
+
+if [ -z "$SERVICE_API_TOKEN" ]; then
+  echo "Must specify the API_TOKEN for the services host."
+  echo "You can use the -t <token> option or set the environment variable"
+  echo "export API_TOKEN=abc123"
+  usage
+  exit 1
+fi
+
+#################################################################
+# Main program
+#################################################################
+
+resp=$(getServiceInfo "services/third_parties")
+if [ "${resp}" == "HTTP Token: Access denied." ]; then
+  echo "Your API_TOKEN is invalid; please correct and try again"
+  exit 1
+fi
+
+# Need to get the MDS Push Service Definition
+pvdgm_tp_id=$(getSpecifiedId "services/third_parties" "pvdgm")
+mds_push_id=$(getSpecifiedId "services/services" "mds_push")
+# echo $(getServiceInfo "services/services")
+# echo "The MDS Push ID: ${mds_push_id}"
+svc_def_id=$(getServiceDefinitionId $pvdgm_tp_id $mds_push_id)
+
+ca_uri="services/third_parties/${pvdgm_tp_id}/service_definitions/${svc_def_id}/configured_accounts"
+
+#fm_uri="services/third_parties/${pvdgm_tp_id}/facility_mappings"
+
+#if [ ! -z "$ACCOUNT_ID" ]; then
+  ## If the user specified an account ID, then we need to get the 
+  ## configured account id for that account.
+  ## hl7_id=$(getSpecifiedId "services/services" "mds_push")
+  #hl7_id=$(getSpecifiedId "services/services" "hl7_inbound")
+  #svc_def_id=$(getServiceDefinitionId $pvdgm_tp_id $hl7_id)
+  #ca_id=$(getConfiguredAccountId $pvdgm_tp_id $svc_def_id $ACCOUNT_ID)
+  #fm_uri+="?configured_account_id=${ca_id}"
+#fi
+
+echo "The URL=${ca_uri}"
+
+# getServiceInfo ${ca_uri}
+getServiceInfo ${ca_uri} | \
+  underscore process "a={ configured_accounts: data }" | \
+  underscore template "configured_account.tpt"
